@@ -1,45 +1,56 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Icon from '@/components/ui/icon';
 
+const API_URL = 'https://functions.poehali.dev/e26cfa69-8e9c-475f-bc37-d28e15db3d30';
+
 const Index = () => {
   const [currentTrack, setCurrentTrack] = useState<number | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [activeSection, setActiveSection] = useState('home');
 
-  const albums = [
-    {
-      id: 1,
-      title: 'Винтажные Мелодии',
-      year: '2024',
-      cover: 'https://cdn.poehali.dev/projects/12e21841-cfbf-49e3-a173-6286147f8f86/files/6d9e07d8-e324-4e0f-97ce-7c74e3d2f375.jpg',
-      tracks: [
-        { id: 1, title: 'Летний Вечер', duration: '3:45' },
-        { id: 2, title: 'Ностальгия', duration: '4:12' },
-        { id: 3, title: 'Под Звёздами', duration: '3:58' },
-      ]
-    }
-  ];
+  const [albums, setAlbums] = useState<any[]>([]);
+  const [videos, setVideos] = useState<any[]>([]);
+  const [lyrics, setLyrics] = useState<any[]>([]);
 
-  const videos = [
-    {
-      id: 1,
-      title: 'Концерт в Старом Театре',
-      thumbnail: 'https://cdn.poehali.dev/projects/12e21841-cfbf-49e3-a173-6286147f8f86/files/44130623-02e3-4e72-8b6f-2401ddc4ca1b.jpg',
-      duration: '5:30'
-    }
-  ];
+  useEffect(() => {
+    loadAlbums();
+    loadVideos();
+    loadLyrics();
+  }, []);
 
-  const lyrics = [
-    {
-      id: 1,
-      title: 'Летний Вечер',
-      text: 'Текст песни будет здесь...\nСтрока за строкой...'
+  const loadAlbums = async () => {
+    try {
+      const response = await fetch(`${API_URL}?path=albums`);
+      const data = await response.json();
+      setAlbums(data);
+    } catch (error) {
+      console.error('Failed to load albums:', error);
     }
-  ];
+  };
+
+  const loadVideos = async () => {
+    try {
+      const response = await fetch(`${API_URL}?path=videos`);
+      const data = await response.json();
+      setVideos(data);
+    } catch (error) {
+      console.error('Failed to load videos:', error);
+    }
+  };
+
+  const loadLyrics = async () => {
+    try {
+      const response = await fetch(`${API_URL}?path=lyrics`);
+      const data = await response.json();
+      setLyrics(data);
+    } catch (error) {
+      console.error('Failed to load lyrics:', error);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -47,7 +58,11 @@ const Index = () => {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <h1 className="text-3xl font-bold font-serif text-primary">🎵 Музыкальный Архив</h1>
-            <div className="flex gap-6">
+            <div className="flex gap-6 items-center">
+              <Button variant="ghost" size="sm" onClick={() => window.location.href = '/admin'}>
+                <Icon name="Settings" size={18} className="mr-2" />
+                Админка
+              </Button>
               {['home', 'albums', 'videos', 'lyrics', 'info', 'contact'].map((section) => (
                 <button
                   key={section}
@@ -137,9 +152,17 @@ const Index = () => {
           <section className="animate-fade-in">
             <h2 className="text-4xl font-serif font-bold mb-8 text-primary">Альбомы</h2>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {albums.length === 0 && (
+                <div className="col-span-full text-center py-12">
+                  <p className="text-muted-foreground mb-4">Альбомы ещё не добавлены</p>
+                  <Button variant="outline" onClick={() => window.location.href = '/admin'}>
+                    Добавить первый альбом
+                  </Button>
+                </div>
+              )}
               {albums.map((album) => (
                 <Card key={album.id} className="overflow-hidden hover:shadow-xl transition-shadow">
-                  <img src={album.cover} alt={album.title} className="w-full h-64 object-cover" />
+                  <img src={album.cover_url || 'https://cdn.poehali.dev/projects/12e21841-cfbf-49e3-a173-6286147f8f86/files/6d9e07d8-e324-4e0f-97ce-7c74e3d2f375.jpg'} alt={album.title} className="w-full h-64 object-cover" />
                   <div className="p-6">
                     <h3 className="text-2xl font-serif font-semibold mb-2">{album.title}</h3>
                     <p className="text-muted-foreground mb-4">{album.year}</p>
@@ -155,7 +178,7 @@ const Index = () => {
                           <DialogTitle className="font-serif text-2xl">{album.title}</DialogTitle>
                         </DialogHeader>
                         <div className="space-y-3">
-                          {album.tracks.map((track) => (
+                          {album.tracks && album.tracks.length > 0 ? album.tracks.map((track: any) => (
                             <div
                               key={track.id}
                               className="flex items-center justify-between p-3 rounded-lg hover:bg-muted cursor-pointer transition-colors"
@@ -174,7 +197,9 @@ const Index = () => {
                               </div>
                               <span className="text-muted-foreground text-sm">{track.duration}</span>
                             </div>
-                          ))}
+                          )) : (
+                            <p className="text-muted-foreground text-center py-4">Треки ещё не добавлены</p>
+                          )}
                         </div>
                       </DialogContent>
                     </Dialog>
@@ -189,10 +214,18 @@ const Index = () => {
           <section className="animate-fade-in">
             <h2 className="text-4xl font-serif font-bold mb-8 text-primary">Видео</h2>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {videos.length === 0 && (
+                <div className="col-span-full text-center py-12">
+                  <p className="text-muted-foreground mb-4">Видео ещё не добавлены</p>
+                  <Button variant="outline" onClick={() => window.location.href = '/admin'}>
+                    Добавить первое видео
+                  </Button>
+                </div>
+              )}
               {videos.map((video) => (
                 <Card key={video.id} className="overflow-hidden hover:shadow-xl transition-shadow">
                   <div className="relative">
-                    <img src={video.thumbnail} alt={video.title} className="w-full h-48 object-cover" />
+                    <img src={video.thumbnail_url || 'https://cdn.poehali.dev/projects/12e21841-cfbf-49e3-a173-6286147f8f86/files/44130623-02e3-4e72-8b6f-2401ddc4ca1b.jpg'} alt={video.title} className="w-full h-48 object-cover" />
                     <div className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition-colors cursor-pointer">
                       <Icon name="Play" size={48} className="text-white" />
                     </div>
@@ -213,6 +246,14 @@ const Index = () => {
           <section className="animate-fade-in">
             <h2 className="text-4xl font-serif font-bold mb-8 text-primary">Тексты Песен</h2>
             <div className="max-w-3xl mx-auto space-y-6">
+              {lyrics.length === 0 && (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground mb-4">Тексты песен ещё не добавлены</p>
+                  <Button variant="outline" onClick={() => window.location.href = '/admin'}>
+                    Добавить первый текст
+                  </Button>
+                </div>
+              )}
               {lyrics.map((lyric) => (
                 <Card key={lyric.id} className="p-8">
                   <h3 className="text-2xl font-serif font-semibold mb-4 text-accent">{lyric.title}</h3>
